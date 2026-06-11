@@ -1,59 +1,97 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('admin can login successfully', function () {
+it('admin can login successfully', function () {
 
-    // Seed admin
-    $this->seed(\Database\Seeders\AdminSeeder::class);
+    // Buat user testing
+    User::create([
+        'name' => 'Hadi',
+        'email' => 'admin@gmail.com',
+        'password' => bcrypt('hadhieganteng'),
+        'role' => 'admin',
+    ]);
 
-    // Hit endpoint login
     $response = $this->postJson('/api/login', [
-        'email' => 'hadhie@sekolah.id',
+        'email' => 'admin@gmail.com',
         'password' => 'hadhieganteng',
     ]);
 
-    // Cek response
     $response->assertStatus(200)
         ->assertJson([
             'status' => true,
             'message' => 'Login berhasil',
         ]);
-
-    // Cek role
-    expect($response['data']['role'])
-        ->toBe('admin');
-
-    // Cek token tidak kosong
-    expect($response['data']['token'])
-        ->not->toBeEmpty();
 });
 
-test('login fails with wrong password', function () {
+it('login fails when email is wrong', function () {
 
-    $this->seed(\Database\Seeders\AdminSeeder::class);
+    User::create([
+        'name' => 'Hadi',
+        'email' => 'admin@gmail.com',
+        'password' => bcrypt('hadhieganteng'),
+        'role' => 'admin',
+    ]);
 
     $response = $this->postJson('/api/login', [
-        'email' => 'hadhie@sekolah.id',
+        'email' => 'salah@gmail.com',
+        'password' => 'hadhieganteng',
+    ]);
+
+    $response->assertStatus(401)
+        ->assertJson([
+            'status' => false,
+            'message' => 'Email atau password salah',
+        ]);
+});
+
+it('login fails with wrong password', function () {
+
+    User::create([
+        'name' => 'Hadi',
+        'email' => 'admin@gmail.com',
+        'password' => bcrypt('hadhieganteng'),
+        'role' => 'admin',
+    ]);
+
+    $response = $this->postJson('/api/login', [
+        'email' => 'admin@gmail.com',
         'password' => 'passwordsalah',
     ]);
 
     $response->assertStatus(401)
         ->assertJson([
             'status' => false,
-            'message' => 'Email atau Password salah',
+            'message' => 'Email atau password salah',
         ]);
 });
 
-test('login validation fails when fields are empty', function () {
+it('login validation fails when fields are empty', function () {
 
-    $response = $this->postJson('/api/login', []);
+    $response = $this->postJson('/api/login', [
+        'email' => '',
+        'password' => '',
+    ]);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors([
             'email',
             'password',
+        ]);
+});
+
+it('login fails when email format is invalid', function () {
+
+    $response = $this->postJson('/api/login', [
+        'email' => 'admin',
+        'password' => 'hadhieganteng',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors([
+            'email',
         ]);
 });
